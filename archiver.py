@@ -24,23 +24,25 @@ class Archiver:
         Initialize the Archiver object with source and destination paths.
 
         :param source: The path to the file or directory to be archived.
-        :type source: str
+        :type source: str or Path
         :param destination: The path to the archive file. If not provided, the archive file will be created in the same directory as the source file with a .tar extension.
-        :type destination: str
+        :type destination: str or Path
         :param progress_callback: A function that takes two arguments (current, total) to report progress.
         :type progress_callback: function
-        :param current: The number of files added to the archive.
-        :type current: int
-        :param total: The total number of files in the source directory.
-        :type total: int
+        :param files_added: The number of files added to the archive.
+        :type files_added: int
         :param bytes_written: The total number of bytes written to the archive.
         :type bytes_written: int
+        :param total_files: The total number of files in the source directory.
+        :type total_files: int
+        :param total_bytes: The total number of bytes in the source directory.
+        :type total_bytes: int
         :param completed_callback: A function that takes two arguments (total, elapsed) to report completion.
         :type completed_callback: function
-        :param total: The total number of files in the source directory.
-        :type total: int
-        :param bytes_written: The total number of bytes written to the archive.
-        :type bytes_written: int
+        :param total_files: The total number of files in the source directory.
+        :type total_files: int
+        :param total_bytes: The total number of bytes in the source directory.
+        :type total_bytes: int
         :param elapsed: The total time taken to complete the archiving process in seconds.
         :type elapsed: float
         """
@@ -76,27 +78,35 @@ class Archiver:
         """
         Archive the source file or directory to the destination path.
 
+
         :param progress_callback: A function that takes two arguments (current, total) to report progress.
         :type progress_callback: function
-        :param current: The number of files added to the archive.
-        :type current: int
+        :param files_added: The number of files added to the archive.
+        :type files_added: int
         :param bytes_written: The total number of bytes written to the archive.
         :type bytes_written: int
-        :param total: The total number of files in the source directory.
-        :type total: int
+        :param total_files: The total number of files in the source directory.
+        :type total_files: int
+        :param total_bytes: The total number of bytes in the source directory.
+        :type total_bytes: int
         :param completed_callback: A function that takes two arguments (total, elapsed) to report completion.
         :type completed_callback: function
-        :param total: The total number of files in the source directory.
-        :type total: int
-        :param bytes_written: The total number of bytes written to the archive.
-        :type bytes_written: int
+        :param total_files: The total number of files in the source directory.
+        :type total_files: int
+        :param total_bytes: The total number of bytes in the source directory.
+        :type total_bytes: int
         :param elapsed: The total time taken to complete the archiving process in seconds.
         :type elapsed: float
         """
+        # If progress_callback and completed_callback are provided, use them; otherwise, use the ones provided during initialization
+        progress_callback = progress_callback or self.progress_callback
+        completed_callback = completed_callback or self.completed_callback
+
         start = time.time()
 
         # Determine the total number of files to be archived
         total_files = self.total_files
+        total_bytes = self.total_bytes
         files_added = 0
         bytes_written = 0
 
@@ -109,20 +119,22 @@ class Archiver:
                     bytes_written += file.stat().st_size
                     # Call the progress callback if provided
                     if progress_callback:
-                        progress_callback(files_added, bytes_written, total_files)
+                        progress_callback(files_added, bytes_written, total_files, total_bytes)
             else:
                 # If source is a single file, add it directly
                 tar.add(self.source, arcname=self.source.name)
                 files_added = 1
                 # Call the progress callback if provided
                 if progress_callback:
-                    progress_callback(files_added, bytes_written, total_files)
+                    progress_callback(
+                        files_added, bytes_written, total_files, total_bytes
+                    )
 
         end = time.time()
 
         # Call the completed callback if provided
         if completed_callback:
-            completed_callback(total_files, bytes_written, end - start)
+            completed_callback(total_files, total_bytes, end - start)
 
     @property
     def total_files(self):
@@ -132,3 +144,12 @@ class Archiver:
         if self.source.is_dir():
             return sum(1 for _ in self.source.rglob("*"))
         return 1
+
+    @property
+    def total_bytes(self):
+        """
+        Return the total number of bytes in the source directory.
+        """
+        if self.source.is_dir():
+            return sum(file.stat().st_size for file in self.source.rglob("*"))
+        return self.source.stat().st_size
