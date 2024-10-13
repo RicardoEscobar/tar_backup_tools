@@ -17,8 +17,8 @@ class Archiver:
         self,
         source: Union[str, Path],
         destination: Optional[Union[str, Path]] = None,
-        progress_callback: Optional[Callable[[int, int], None]] = None,
-        completed_callback: Optional[Callable[[int, float], None]] = None,
+        progress_callback: Optional[Callable[[int, int, int, int], None]] = None,
+        completed_callback: Optional[Callable[[int, int, float], None]] = None,
     ):
         """
         Initialize the Archiver object with source and destination paths.
